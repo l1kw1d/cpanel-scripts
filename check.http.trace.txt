@@ -1,0 +1,35 @@
+Check DNS and HTTP trace with headers for specific domains
+### Set domains and external dns servers.
+_domain_list=(google.com) ; _dns_list=("8.8.8.8" "1.1.1.1")
+
+for _domain in "${_domain_list[@]}" ; do
+
+  printf '=%.0s' {1..48}
+
+  echo
+
+  printf "[\\e[1;32m+\\e[m] resolve: %s\\n" "$_domain"
+
+  for _dns in "${_dns_list[@]}" ; do
+
+    # Resolve domain.
+    host "${_domain}" "${_dns}"
+
+    echo
+
+  done
+
+  for _proto in http https ; do
+
+    printf "[\\e[1;32m+\\e[m] trace + headers: %s://%s\\n" "$_proto" "$_domain"
+
+    # Get trace and http headers.
+    curl -Iks -A "x-agent" --location "${_proto}://${_domain}"
+
+    echo
+
+  done
+
+done
+
+unset _domain_list _dns_list

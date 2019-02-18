@@ -1,0 +1,434 @@
+cat /usr/local/apache/conf/modsec2.user.conf | grep xmlrpc
+#xmlrpc
+===================
+SecRule REQUEST_LINE "POST .*xmlrpc.*" "pass,initcol:ip=%{REMOTE_ADDR},setvar:ip.maxlimit=+1,deprecatevar:ip.maxlimit=1/600,nolog,id:35061"
+SecRule IP:MAXLIMIT "@gt 5" "log,deny,id:350611,msg:'wp-xmlrpc: denying %{REMOTE_ADDR} (%{ip.maxlimit} connection attempts)'"
+
+#wp-bruteforce
+===================
+SecRule REQUEST_LINE "POST .*wp-login.*" "pass,initcol:ip=%{REMOTE_ADDR},setvar:ip.maxlimit=+1,deprecatevar:ip.maxlimit=1/600,nolog,id:35011"
+SecRule IP:MAXLIMIT "@gt 10" "log,deny,id:350111,msg:'wp-bruteforce: denying %{REMOTE_ADDR} (%{ip.maxlimit} connection attempts)'"
+
+# Joomla Brute Force Protection
+===================
+<LocationMatch "/administrator/index.php">
+SecAction phase:1,nolog,pass,initcol:ip=%{REMOTE_ADDR},initcol:user=%{REMOTE_ADDR},id:00113
+SecRule user:bf_block "[at]gt 0" "deny,status:403,log,id:00114,msg:'IP address blocked for 5 minutes. More than 3 Joomla POST requests within 10 seconds.'"
+SecRule REQUEST_METHOD "^POST$" "phase:5,chain,t:none,nolog,pass,setvar:ip.bf_counter=+1,deprecatevar:ip.bf_counter=1/10,id:00115"
+SecRule ip:bf_counter "[at]gt 3" "t:none,setvar:user.bf_block=1,expirevar:user.bf_block=300,setvar:ip.bf_counter=0"
+</LocationMatch>
+
+
+#badrequests
+================
+root@hp194 [/usr/local/apache/conf]# cat badrequests.txt
+Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1
+
+SecRule REQUEST_HEADERS:User-Agent "@pmFromFile badrequests.txt" "id:3500786,rev:1,severity:2,log,msg:'BAD BOT - Detected and Blocked. '"
+
+root@hp170 [/usr/local/apache/conf]# cat /root/sysutils/tools/badrequestsblock.sh
+#!/bin/bash
+for i in `tail -1000 /usr/local/apache/logs/error_log|grep "3500786" | replace "[client " "%" | cut -d "%" -f2 | awk '{print $1}' | replace "]" "" | sort -n |uniq`;do /usr/sbin/csf -d $i badrequests;done
+================
+
+
+#badbot
+===========
+root@hp131 [/usr/local/apache/conf]# cat badbots.txt
+SemrushBot
+MJ12bot
+YandexBot
+aiHitBot
+AhrefsBot
+
+SecRule REQUEST_HEADERS:User-Agent "@pmFromFile badbots.txt""id:350002,rev:1,severity:2,log,msg:'BAD BOT - Detected and Blocked. '"
+
+root@hp90 [/usr/local/apache/conf]# cat /root/sysutils/tools/badbotblock.sh
+#!/bin/bash
+for i in `tail -1000 /usr/local/apache/logs/error_log|grep "350002" | replace "[client " "%" | cut -d "%" -f2 | awk '{print $1}' | replace "]" "" | sort -n |uniq`;do /usr/sbin/csf -d $i badrequests;done
+===========
+
+
+exim attack
+===========
+netstat -plan|grep ‘:25’|grep ESTAB | wc -l
+netstat -plan|grep .:25.|grep ESTAB | awk {'print $5'} | cut -d: -f1 | uniq -c | sort -n
+cat /etc/exim.conf |grep smtp_accept_max
+===========
+
+
+ps aufx | grep php | awk {'print $1'} | sort | uniq -c | sort -n
+mysqladmin pr | awk {'print $4'} | sort | uniq -c | sort -n
+
+
+netstat -anp |grep 'tcp\|udp' | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -n
+netstat -tulnap | awk '{print $7}' | sed -n -e '/[/]/p' | cut -s -d'/' -f2 | sort | uniq -c | sort -nk 1
+
+mysqladmin proc | grep Sleep | awk '{print $2}' | while read LINE; do mysqladmin kill $LINE; done
+
+
+egrep 'wp-login.php' /usr/local/apache/domlogs/* | grep -v ftp_log | awk -F : '{print $2}' | awk '{print $1}' | sort | uniq -c | sort -n
+egrep 'xmlrpc.php' /usr/local/apache/domlogs/* | grep -v ftp_log | awk -F : '{print $2}' | awk '{print $1}' | sort | uniq -c | sort -n
+
+
+
+grep domainname /usr/local/apache/logs/error_log | grep ModSecurity | grep id | awk {'print $28'} | sort | uniq -c | sort -n
+grep domainname /usr/local/apache/logs/error_log | grep ModSecurity | grep id
+
+
+dig frazerwebdesign.com ANY +noall +answer
+
+# chroot /mnt/sysimage
+
+netstat -anp |grep 'tcp\|udp' | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -n
+netstat -plan |grep :80 | awk '{print $4}' | cut -d: -f1 | sort | uniq -c | sort -n
+netstat -apn | grep :80 | wc -l
+lynx http://localhost/whm-server-status
+less /usr/local/apache/logs/access_log | awk '{print $1}' | sort | uniq -c | sort -n | tail
+
+
+ls -al -SR | head -10
+-----------------------------------------------------
+salt hp*.hostpapa.com cmd.run 'replace "update_type: 2" "update_type: 1" -- /usr/local/cpanel/3rdparty/GlobalSign/updates.config' --summary
+salt hp*.hostpapa.com cmd.run "/usr/local/cpanel/3rdparty/GlobalSign/updates/GlobalSign-OneClickSSL-cPanel-Plugin-3.26.sea" --summary
+-----------------------------------------------------
+
+virsh list --all
+virsh create sm-hardware/cpanel_vm.xml
+
+
+Default Email ID issue
+=====================
+ln -s tagcouriers.com/toronto/ .toronto\@tagcouriers_com
+chown -h user:user .toronto\@tagcouriers_com
+=====================
+
+
+syncing manually now with
+for i in `ls -1 /var/named|rev | cut -d'.' -f2-|rev`;do /scripts/dnscluster synczone $i;done
+
+/usr/bin/python /usr/sbin/iotop
+/usr/bin/perl -w /usr/bin/collectl
+/usr/bin/mc -P /tmp/mc-root/mc.pwd.974881
+
+
+Path in php.ini is changed to /home/user/ioncube instead of /usr/local/IonCube
+
+=================
+openssl ciphers -v | awk '{print $2}' | sort | uniq
+openssl s_client -ssl3 -connect localhost:443
+openssl s_client -tls1_1 -connect localhost:443
+openssl s_client -tls1_2 -connect localhost:443
+=================
+
+
+root@hp61 [~]# curl --head www.google.co.in
+HTTP/1.1 200 OK1:30
+
+
+ALT  + B : Move Backward by one word at a time
+ALT  + F : Move Forward by one word at a time
+CTRL + A : Move curser to beginning of the command
+CTRL + E : Move curser to the end of the command
+CTRL + W : Delete one word at a time moving backwards
+CTRL + U : Delete the entire command at once
+
+
+To create a net route
+
+At the CLI, type:
+route add -net IP_ADDRESS netmask NETMASK gw GATEWAY_IP dev eth0
+
+Where IP_ADDRESS is the IP address of the network, NETMASK is the subnet mask, GATEWAY_IP is the IP address of the gateway machine, and eth0 is the actual interface that connects to the network where the gateway is present.
+
+
+
+Globalsign Error ID: 19
+==================
+/var/cpanel/ssl/cpanel/mycpanel.pem  --- file was missing and check for globalsign plugin version
+==================
+
+Domlogs
+============
+for i in `cut -d: -f1 /etc/trueuserdomains`;do echo "$i= `cut -d' ' -f1 /usr/local/apache/domlogs/$i|wc -l`" >> /usr/local/src/file;done
+cat /usr/local/src/file | awk {'print $2'} | sort -n | tail
+============
+
+
+
+find /home -user <username>
+systemctl restart ipaliases
+cd /dev/mapper
+
+
+Download latest ioncube to client's home folder and change the path to ioncube in client's php.ini
+cat php.ini | grep ionc
+; zend_extension="/usr/local/IonCube/ioncube_loader_lin_5.5.so"
+zend_extension="/home/plann259/ioncube/ioncube_loader_lin_5.5.so"
+
+ 
+Symlink: ln -s /path/to/file /path/to/symlink
+ln -s /home/bandwidth /var/cpanel/bandwidth
+ln -s /home/indes736/indes736_stuntshow /var/lib/mysql/indes736_stuntshow
+
+To run command on Salt for needed servers:
+------------------------
+#/bin/bash
+for i in `cat /usr/local/src/CA_servers`; do
+echo $i;
+salt $i cmd.run "wget -N http://hp201.hostpapa.com/proxy.sh -O /usr/local/src/proxy.sh;" --summary;
+salt $i cmd.run "sh /usr/local/src/proxy.sh";
+salt $i cmd.run "ls -la /usr/local/src/proxy.sh";
+done
+------------------------
+
+Salt
+----------------
+salt hp*.hostpapa.com cmd.run "wget -N http://hp202.hostpapa.com/domlogs.sh -O /root/sysutils/tools/domlogs.sh;" --summary;
+
+-O,  --output-document=FILE    write documents to FILE.
+-N,  --timestamping            donât re-retrieve files unless newer than
+----------------
+
+
+/usr/local/cpanel/scripts/check_cpanel_rpms --fix
+
+
+
+Kill specific processes
+===========
+for i in `ps aux | grep dovecot | awk '{print $2}'` ; do kill -9 $i ; done
+for i in `ps aux | grep php | awk '{print $2}'` ; do echo $i ; kill -9 $i ; done
+===========
+
+
+To update the quota of specific user
+=================
+edquota -u <Username>
+=================
+
+for i in /home/*; do echo $i; find $i |wc -l; done
+
+root@hp191 [~]# cat /etc/cpanelsync.exclude
+/usr/local/cpanel/base/frontend/paper_lantern/mail/pops.html.tt
+
+
+/usr/local/nagios/etc/nrpe.cfg
+
+cat /var/log/messages | grep "Oct 11" | grep SRC= | awk {'print $12'} | replace "SRC=" "" | sort | uniq -c | sort -n | tail -15
+
+
+# mysql -h hp189.hostpapa.com -urapto519_hptest -phptest123
+
+
+
+Website downtime
+=============
+We have checked, but we do not see any website downtime logs related to domain (andybowers.com). Further, we could see that website http://andybowers.com/ is working fine at the moment and there is no recent downtime for any of the services present on the server. Kindly refer the below screenshot and server up-time for the verification:
+
+============
+http://screencast.com/t/uHU9wFKSoX
+============
+
+============
+Apache  uptime: 3 day 3 hours 34 minutes 25 seconds
+Server uptime    12 days,  1:30,  1 user,  load average: load average: 0.30,
+0.10, 0.04
+============
+
+Kindly ask the client to get back to us with the exact time-frame at which their website was down, so we will investigate this issue accordingly.
+=============
+
+cPanel other usage
+==============
+find / -user CPANELUSERNAME
+e.g. find / -user albinabo -exec du -sh {} \;
+==============
+
+
+To enable detail mail logs, do below in /etc/exim.conf
+=================
+log_selector = +all
+=================
+
+All CGI SYS file location
+===============
+/usr/local/cpanel/cgi-sys
+===============
+
+
+IMP Commands
+=============
+/usr/local/cpanel/scripts/check_cpanel_rpms --fix
+/usr/local/cpanel/scripts/autorepair fix_duplicate_cpanel_rpms
+/usr/local/cpanel/scripts/upcp --force
+/scripts/perlinstaller Task::Cpanel::Core
+grep -H '' /etc/*release /usr/local/cpanel/version
+=============
+
+
+sh /root/sysutils/tools/badrequestsblock.sh
+sh /root/sysutils/tools/badbotblock.sh
+
+
+grep -i "auth failed" /var/log/maillog  |wc -l
+
+
+
+To many processes like /usr/local/cpanel/bin/dovecot-wrap /usr/libexec/dovecot/checkpassword-reply
+https://forums.cpanel.net/threads/brute-force-against-dovecot.477411/
+==================
+csf should be blocking these attacks using below
+LF_SMTPAUTH
+LF_DISTATTACK
+LF_DISTSMTP
+LF_DISTSMTP_UNIQ
+LF_DISTSMTP_PERM
+==================
+
+xe-toolstack-restart
+
+
+
+root@vmx19996 [~]#  cat  /etc/csf/csf.suignore
+toor
+
+echo "toor:all" >> /var/cpanel/resellers
+
+
+https://documentation.cpanel.net/display/CKB/How+to+Create+a+WHM+Reseller+Without+An+Associated+Domain
+
+
+ 
+AusWeb Reverse IP
+-----------------------
+Need to login to https://m2.ausweb.com.au:2087/ WHM 10:28
+select edit dns zone.. choose the zone as per the reverse IP
+-----------------------
+
+
+
+ >netstat -an | findstr "3389"
+ 
+ tcpdump -i venet0 -n port 53
+ 
+ 
+ C:\Program Files\Idera Server Backup\log
+ 
+ 
+netstat -ano | findstr 8447
+taskkill /F /IM PID
+
+
+toor@vmh17554 [~]# cat /var/spool/cron/toor |grep mysql
+30 */2 * * * /usr/local/cpanel/bin/mysqluserstore >/dev/null 2>&1
+* */2 * * * /etc/init.d/mysql restart
+
+
+PowerShell Command to dismount VHDX
+----------------------------------------
+C:\Users\Administrator> Dismount-VHD "VHDX PATH"
+C:\Users\Administrator> Dismount-VHD "D:\HyperV\Hyper-V Replica\Virtual hard disks\69ED3770-2B24-428E-AED4-15DD2C117CAD\ds01350Rvm1-disk4.vhdx"
+----------------------------------------
+
+mount -t iso9660 -o ro /dev/cdrom /mnt/cdrom
+mount -t iso9660 -o ro /dev/cdrom /media/cdrom/
+
+
+ 
+MAN007 - Xen license 
+D:\Driver_Firmware\Other\Xen
+
+
+sar -q -f /var/log/sa/sa24
+
+
+savedefault --default=0 --once
+
+
+
+Disk cleanup Windows Plesk
+--------------------
+C:\Program Files (x86)\Parallels\Plesk\PrivateTemp
+C:\Program Files (x86)\Parallels\Plesk\Backup
+--------------------
+
+
+ xentop -b -i 3 | sort -r -nk4 | head -15 | awk '!_[$1]++'
+ 
+ 
+ 
+ 
+ 
+ [root@gh-ws-lh02 public_html]# cat .htaccess
+
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php54” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddType application/x-httpd-ea-php54 .php .php5 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
+
+
+
+To fix grub issue : http://prntscr.com/cf92at
+========
+grub> root=(hd click on tab
+grub> root=(hd0,0)
+to see that exact partition on the server run below command in grub.
+cat /etc/fstab
+
+and then select any old kernel using below command 
+grub> kernel /boot/vmlinuz- click on tab to see available kernel. 
+grub> kernel /boot/vmlinuz-2.6.32-573.26.1.el6.x86_64 root=/dev/sda1
+grub> initrd /boot/initrd.img-2.6.32-573.26.1.el6.x86_64
+grub> boot
+========
+
+
+
+# /scripts/hulk-unban-ip <ip_address>;
+
+
+php -q /home/hostnet/public_html/painel/crons/cron.php all -F -vvv
+
+
+
+du -sh .[!.]* *
+
+
+
+Cloudlinux license
+------------------------
+/usr/bin/cldetect --update-license
+/usr/bin/cldetect --check-license
+/usr/sbin/clnreg_ks –force
+------------------------
+
+
+
+
+FTP commands
+-------------------------
+wget -r --user="dacom" --ask-password ftp://ftp2.ftptoyoursite.com/content/wp-content/plugins/admin-menu-editor-pro
+wget -m -nH --user='bondipsy' --password='Fh0b!KTimT.!' ftp://181.224.157.48/backup-7.4.2017_11-14-22_bondipsy.tar.gz
+wget -r  ftp://np38062b:astrid2012@50.23.160.214/httpdocs
+
+
+[root@odedi23693 ~]# nmap -sS -O -p 25 192.99.87.204
+
+
+wget -r  ftp://dacom:'\g*mV%7Mu^4EW$#w'@ftp2.ftptoyoursite.com/content/wp-content/plugins/admin-menu-editor-pro
+
+
+https://superuser.com/questions/40281/how-do-i-get-an-entire-directory-in-sftp
+
+
+sftp -oPort=2233 hbp@104.131.132.159:/var/www/happybiopharma.com/htdocs
+get -r *
+
+
+curl -s https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py | python -
+
+vzlist -o ctid,laverage

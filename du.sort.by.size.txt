@@ -1,0 +1,9 @@
+du | sort -nr | cut -f2- | xargs du -hs
+
+
+du -hs * | sort -h
+
+
+du -h --max-depth=1 /home/ | sort -n -r
+
+du -h --max-depth=1 /home/ | sort -h

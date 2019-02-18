@@ -1,0 +1,42 @@
+You may need to monitor server with the help of your server administrator and check domain access logs at the time of load spike to analyze further.
+
+You can try this system monitoring script which records detailed logs of resource usage and process activity. Please use the following commands to install:
+wget -O /root/sys-snap.pl https://raw.githubusercontent.com/cPanelTechs/SysSnapv2/master/sys-snap.pl
+cd /root/ && chmod 744 sys-snap.pl && perl sys-snap.pl --start
+
+The script connects data from the following places:
+/proc/loadavg
+/proc/meminfo
+vmstat 1 10
+ps auwwxf
+netstat -anp
+mysqladmin proc
+localhost/whm-server-status
+http://localhost/server-status
+lsof
+
+The script creates log files at "/root/system-snapshot/". There is a directory for each hour, and a log for each minute. The most recent log file has a symbolic link to "/root/system-snapshot/current". If you need to stop the script, you can do so with this command:
+
+perl /root/sys-snap.pl --stop
+
+If you need to start the script again, such as after a reboot, use this command:
+
+perl /root/sys-snap.pl --start
+
+Run the following command to Check whether it is running or not
+ps aux | grep snap
+
+root@tango [/home]# ps aux | grep snap
+root 30472 0.0 0.0 131624 4644 ? Ss 10:04 0:03 perl /root/sys-snap.pl --start
+root 30502 0.0 0.0 131624 4644 ? Ss 10:04 0:02 perl /root/sys-snap.pl --start
+
+
+Set a Cron to remove old log files from /root/system-snapshot/
+
+Download the script
+cd /usr/local/src/
+wget http://94.247.100.142/clearsnapshots.sh
+
+set a cron to run every week
+0 1 * * 6 /bin/sh /usr/local/src/clearsnapshots.sh
+
